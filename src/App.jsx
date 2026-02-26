@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import AuthGate from './components/AuthGate'
 import IndividualToolUI from './components/IndividualToolUI'
 import BusinessToolUI from './components/BusinessToolUI'
 import HighDemandPage from './components/HighDemandPage'
 import TypewriterHero from './components/TypewriterHero'
-import { isOverDailyLimit } from './api'
+import { getMe, clearSession } from './api'
 import './index.css'
 
 // 8 main models — matches the "8+" stat
@@ -27,13 +27,23 @@ const STATS = [
 ]
 
 export default function App() {
-  const [page, setPage] = useState('home')     // 'home' | 'signup'
-  const [user, setUser] = useState(null)        // { name, email, tier }
-  const [overLimit, setOverLimit] = useState(() => isOverDailyLimit())
+  const [page, setPage] = useState('home')  // 'home' | 'signup' | 'login'
+  const [user, setUser] = useState(null)    // { name, email, tier }
+  const [overLimit, setOverLimit] = useState(false)
 
-  // Called by tool UIs after each generation so App re-checks spend
-  function handleSpendUpdate() {
-    setOverLimit(isOverDailyLimit())
+  // Auto-restore session from localStorage JWT on mount
+  useEffect(() => {
+    getMe().then(u => { if (u) setUser(u) })
+  }, [])
+
+  function handleOverLimit() {
+    setOverLimit(true)
+  }
+
+  function handleLogout() {
+    clearSession()
+    setUser(null)
+    setPage('home')
   }
 
   // Global kill switch — overrides all other views
@@ -45,7 +55,7 @@ export default function App() {
     const ToolUI = user.tier === 'Business' ? BusinessToolUI : IndividualToolUI
     return (
       <motion.div key="tool" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
-        <ToolUI user={user} onSpendUpdate={handleSpendUpdate} />
+        <ToolUI user={user} onOverLimit={handleOverLimit} onLogout={handleLogout} />
       </motion.div>
     )
   }
@@ -53,19 +63,27 @@ export default function App() {
   if (page === 'signup') {
     return (
       <motion.div key="signup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-        <AuthGate onAuth={setUser} onBack={() => setPage('home')} />
+        <AuthGate mode="signup" onAuth={setUser} onBack={() => setPage('home')} />
+      </motion.div>
+    )
+  }
+
+  if (page === 'login') {
+    return (
+      <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+        <AuthGate mode="login" onAuth={setUser} onBack={() => setPage('home')} />
       </motion.div>
     )
   }
 
   return (
     <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
-      <LandingPage onGetStarted={() => setPage('signup')} />
+      <LandingPage onGetStarted={() => setPage('signup')} onLogin={() => setPage('login')} />
     </motion.div>
   )
 }
 
-function LandingPage({ onGetStarted }) {
+function LandingPage({ onGetStarted, onLogin }) {
   const carouselItems = [...CAROUSEL_MODELS, ...CAROUSEL_MODELS]
 
   return (
@@ -94,21 +112,38 @@ function LandingPage({ onGetStarted }) {
         }}>
           Properly Prompt
         </h1>
-        <button
-          onClick={onGetStarted}
-          style={{
-            background: 'transparent',
-            color: 'var(--color-ink)',
-            fontFamily: 'var(--font-serif)',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            border: '1px solid rgba(26,26,24,0.3)',
-            padding: '0.4rem 1rem',
-            cursor: 'pointer',
-            letterSpacing: '0.01em',
-          }}>
-          Get started — free
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={onLogin}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              color: 'var(--color-ink-muted)',
+              cursor: 'pointer',
+              padding: '0.4rem 0.75rem',
+              letterSpacing: '0.01em',
+            }}>
+            Log in
+          </button>
+          <button
+            onClick={onGetStarted}
+            style={{
+              background: 'transparent',
+              color: 'var(--color-ink)',
+              fontFamily: 'var(--font-serif)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              border: '1px solid rgba(26,26,24,0.3)',
+              padding: '0.4rem 1rem',
+              cursor: 'pointer',
+              letterSpacing: '0.01em',
+            }}>
+            Get started — free
+          </button>
+        </div>
       </header>
 
       {/* ── Main ── */}
@@ -279,7 +314,7 @@ function LandingPage({ onGetStarted }) {
             letterSpacing: '0.01em',
             marginBottom: '4rem',
           }}>
-          Get started — free
+          Login / Sign up
         </button>
 
       </main>

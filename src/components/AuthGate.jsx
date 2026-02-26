@@ -1,20 +1,44 @@
 import { useState } from 'react'
-import { triggerGHLWebhook } from '../api'
+import { signup, login, triggerGHLWebhook } from '../api'
 
-export default function AuthGate({ onAuth, onBack }) {
-  const [tier, setTier] = useState(null) // 'Individual' | 'Business'
+export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
+  const [localMode, setLocalMode] = useState(mode)
+  const [tier, setTier] = useState(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  function switchMode(m) {
+    setLocalMode(m)
+    setError('')
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!email || !tier) return
+    setError('')
     setIsSubmitting(true)
-    // Fire GHL webhook (non-blocking)
-    await triggerGHLWebhook(name, email, tier)
-    onAuth({ name, email, tier })
+    try {
+      let user
+      if (localMode === 'signup') {
+        user = await signup({ name, email, password, tier })
+        triggerGHLWebhook(name, email, tier) // non-blocking CRM
+      } else {
+        user = await login({ email, password })
+      }
+      onAuth(user)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+
+  const isSignup = localMode === 'signup'
+  const canSubmit = isSignup
+    ? (tier && email && password && !isSubmitting)
+    : (email && password && !isSubmitting)
 
   return (
     <div style={{
@@ -72,7 +96,7 @@ export default function AuthGate({ onAuth, onBack }) {
           marginBottom: '0.4rem',
           lineHeight: 1.1,
         }}>
-          Get started.
+          {isSignup ? 'Get started.' : 'Welcome back.'}
         </h2>
         <p style={{
           fontFamily: 'var(--font-garamond)',
@@ -81,136 +105,140 @@ export default function AuthGate({ onAuth, onBack }) {
           color: 'var(--color-ink-muted)',
           marginBottom: '2rem',
         }}>
-          10 free prompts, every day.
+          {isSignup ? '10 free prompts, every day.' : 'Log in to your account.'}
         </p>
 
-        {/* Tier selection */}
-        <div style={{ marginBottom: '2rem' }}>
-          <p style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: '0.6rem',
-            fontWeight: 600,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--color-ink-muted)',
-            marginBottom: '0.75rem',
-          }}>
-            Select Your Plan
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-            {/* Individual */}
-            <button
-              type="button"
-              onClick={() => setTier('Individual')}
-              style={{
-                border: `2px solid ${tier === 'Individual' ? 'var(--color-accent)' : 'rgba(26,26,24,0.18)'}`,
-                padding: '1.1rem 0.9rem',
-                background: tier === 'Individual' ? 'rgba(139,0,0,0.04)' : 'transparent',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'border-color 0.15s, background 0.15s',
-              }}>
-              <div style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '0.58rem',
-                fontWeight: 600,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: tier === 'Individual' ? 'var(--color-accent)' : 'var(--color-ink-muted)',
-                marginBottom: '0.25rem',
-                transition: 'color 0.15s',
-              }}>
-                Individual
-              </div>
-              <div style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: 'var(--color-ink)',
-                marginBottom: '0.2rem',
-              }}>
-                Personal Use
-              </div>
-              <div style={{
-                fontFamily: 'var(--font-garamond)',
-                fontSize: '0.78rem',
-                fontStyle: 'italic',
-                color: 'var(--color-ink-muted)',
-              }}>
-                Creators & freelancers
-              </div>
-            </button>
+        {/* Tier selection — signup only */}
+        {isSignup && (
+          <div style={{ marginBottom: '2rem' }}>
+            <p style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.6rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--color-ink-muted)',
+              marginBottom: '0.75rem',
+            }}>
+              Select Your Plan
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              {/* Individual */}
+              <button
+                type="button"
+                onClick={() => setTier('Individual')}
+                style={{
+                  border: `2px solid ${tier === 'Individual' ? 'var(--color-accent)' : 'rgba(26,26,24,0.18)'}`,
+                  padding: '1.1rem 0.9rem',
+                  background: tier === 'Individual' ? 'rgba(139,0,0,0.04)' : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.58rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: tier === 'Individual' ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+                  marginBottom: '0.25rem',
+                  transition: 'color 0.15s',
+                }}>
+                  Individual
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: 'var(--color-ink)',
+                  marginBottom: '0.2rem',
+                }}>
+                  Personal Use
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-garamond)',
+                  fontSize: '0.78rem',
+                  fontStyle: 'italic',
+                  color: 'var(--color-ink-muted)',
+                }}>
+                  Creators & freelancers
+                </div>
+              </button>
 
-            {/* Business */}
-            <button
-              type="button"
-              onClick={() => setTier('Business')}
-              style={{
-                border: `2px solid ${tier === 'Business' ? 'var(--color-ink)' : 'rgba(26,26,24,0.18)'}`,
-                padding: '1.1rem 0.9rem',
-                background: tier === 'Business' ? 'rgba(26,26,24,0.04)' : 'transparent',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'border-color 0.15s, background 0.15s',
-              }}>
-              <div style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: '0.58rem',
-                fontWeight: 600,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: tier === 'Business' ? 'var(--color-ink)' : 'var(--color-ink-muted)',
-                marginBottom: '0.25rem',
-                transition: 'color 0.15s',
-              }}>
-                Business
-              </div>
-              <div style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: 'var(--color-ink)',
-                marginBottom: '0.2rem',
-              }}>
-                Enterprise Use
-              </div>
-              <div style={{
-                fontFamily: 'var(--font-garamond)',
-                fontSize: '0.78rem',
-                fontStyle: 'italic',
-                color: 'var(--color-ink-muted)',
-              }}>
-                Teams & agencies
-              </div>
-            </button>
+              {/* Business */}
+              <button
+                type="button"
+                onClick={() => setTier('Business')}
+                style={{
+                  border: `2px solid ${tier === 'Business' ? 'var(--color-ink)' : 'rgba(26,26,24,0.18)'}`,
+                  padding: '1.1rem 0.9rem',
+                  background: tier === 'Business' ? 'rgba(26,26,24,0.04)' : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}>
+                <div style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.58rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: tier === 'Business' ? 'var(--color-ink)' : 'var(--color-ink-muted)',
+                  marginBottom: '0.25rem',
+                  transition: 'color 0.15s',
+                }}>
+                  Business
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: 'var(--color-ink)',
+                  marginBottom: '0.2rem',
+                }}>
+                  Enterprise Use
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-garamond)',
+                  fontSize: '0.78rem',
+                  fontStyle: 'italic',
+                  color: 'var(--color-ink-muted)',
+                }}>
+                  Teams & agencies
+                </div>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Full Name */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <label style={{
-            display: 'block',
-            fontFamily: 'var(--font-sans)',
-            fontSize: '0.6rem',
-            fontWeight: 600,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--color-ink-muted)',
-            marginBottom: '0.5rem',
-          }}>
-            Full Name
-          </label>
-          <input
-            className="press-input"
-            type="text"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
+        {/* Full Name — signup only */}
+        {isSignup && (
+          <div style={{ marginBottom: '1.75rem' }}>
+            <label style={{
+              display: 'block',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.6rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--color-ink-muted)',
+              marginBottom: '0.5rem',
+            }}>
+              Full Name
+            </label>
+            <input
+              className="press-input"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+        )}
 
         {/* Email */}
-        <div style={{ marginBottom: '2.25rem' }}>
+        <div style={{ marginBottom: '1.75rem' }}>
           <label style={{
             display: 'block',
             fontFamily: 'var(--font-sans)',
@@ -233,9 +261,46 @@ export default function AuthGate({ onAuth, onBack }) {
           />
         </div>
 
+        {/* Password */}
+        <div style={{ marginBottom: '2.25rem' }}>
+          <label style={{
+            display: 'block',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--color-ink-muted)',
+            marginBottom: '0.5rem',
+          }}>
+            Password
+          </label>
+          <input
+            className="press-input"
+            type="password"
+            placeholder={isSignup ? 'Min. 8 characters' : 'Your password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <p style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '0.72rem',
+            color: 'var(--color-accent)',
+            marginBottom: '1rem',
+            lineHeight: 1.4,
+          }}>
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          disabled={!tier || !email || isSubmitting}
+          disabled={!canSubmit}
           style={{
             width: '100%',
             background: 'var(--color-ink)',
@@ -245,15 +310,17 @@ export default function AuthGate({ onAuth, onBack }) {
             fontWeight: 600,
             border: 'none',
             padding: '0.75rem 1.5rem',
-            cursor: (!tier || !email || isSubmitting) ? 'not-allowed' : 'pointer',
+            cursor: !canSubmit ? 'not-allowed' : 'pointer',
             letterSpacing: '0.01em',
-            opacity: (!tier || !email || isSubmitting) ? 0.55 : 1,
+            opacity: !canSubmit ? 0.55 : 1,
             transition: 'opacity 0.15s',
           }}>
-          {isSubmitting ? 'Setting up...' : 'Continue'}
+          {isSubmitting
+            ? (isSignup ? 'Creating account...' : 'Logging in...')
+            : (isSignup ? 'Create Account' : 'Log In')}
         </button>
 
-        {!tier && (
+        {isSignup && !tier && (
           <p style={{
             fontFamily: 'var(--font-sans)',
             fontSize: '0.65rem',
@@ -264,6 +331,32 @@ export default function AuthGate({ onAuth, onBack }) {
             Select a plan above to continue
           </p>
         )}
+
+        {/* Mode switch */}
+        <p style={{
+          fontFamily: 'var(--font-sans)',
+          fontSize: '0.72rem',
+          color: 'var(--color-ink-muted)',
+          textAlign: 'center',
+          marginTop: '1.5rem',
+        }}>
+          {isSignup ? 'Already have an account? ' : 'New here? '}
+          <button
+            type="button"
+            onClick={() => switchMode(isSignup ? 'login' : 'signup')}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.72rem',
+              color: 'var(--color-ink)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}>
+            {isSignup ? 'Log in' : 'Sign up'}
+          </button>
+        </p>
       </form>
     </div>
   )

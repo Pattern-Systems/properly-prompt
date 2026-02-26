@@ -6,7 +6,7 @@ import { generateBusinessPrompt } from '../api'
 const MODELS = ['Claude 3.5', 'GPT-4o', 'Gemini 1.5 Pro', 'Sora', 'Qwen3', 'Mistral Large']
 const TASKS = ['Image Generation', 'Video Production', 'App / Web Dev', 'Data & Excel', 'Copywriting', 'Research']
 
-export default function BusinessToolUI({ user, onSpendUpdate }) {
+export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
   const [model, setModel] = useState(MODELS[0])
   const [task, setTask] = useState(TASKS[0])
   const [depth, setDepth] = useState('professional')
@@ -29,8 +29,8 @@ export default function BusinessToolUI({ user, onSpendUpdate }) {
       const prompt = await generateBusinessPrompt({ model, task, depth, userInput })
       setGeneratedPrompt(prompt)
       setCredits((c) => Math.max(0, c - 1))
-      onSpendUpdate?.()
     } catch (err) {
+      if (err.code === 'OVER_LIMIT') { onOverLimit?.(); return }
       setError('Failed to generate prompt. Please try again.')
       console.error(err)
     } finally {
@@ -103,6 +103,22 @@ export default function BusinessToolUI({ user, onSpendUpdate }) {
           }}>
             {user?.name || user?.email}
           </span>
+
+          <button
+            onClick={onLogout}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.65rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: mutedColor,
+              cursor: 'pointer',
+              padding: 0,
+            }}>
+            Log out
+          </button>
         </div>
       </header>
 
