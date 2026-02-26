@@ -25,6 +25,7 @@ if (existsSync(envPath)) {
 
 // ─── Database Init ────────────────────────────────────────────────────────────
 const db = new Database(path.join(__dirname, 'db.sqlite'))
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,6 +34,29 @@ db.exec(`
     name          TEXT    DEFAULT '',
     tier          TEXT    DEFAULT 'Individual',
     created_at    TEXT    DEFAULT (datetime('now'))
+  )
+`)
+
+// Safe migration — add plan column to existing databases
+try { db.exec(`ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'free'`) } catch { /* already exists */ }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS redeemed_codes (
+    code        TEXT    UNIQUE NOT NULL,
+    user_id     INTEGER NOT NULL,
+    redeemed_at TEXT    DEFAULT (datetime('now'))
+  )
+`)
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER,
+    user_email TEXT,
+    tier       TEXT,
+    reason     TEXT,
+    timestamp  INTEGER,
+    created_at TEXT    DEFAULT (datetime('now'))
   )
 `)
 
@@ -181,6 +205,15 @@ app.post('/api/generate', async (req, res) => {
     const modelId        = isBusinessTier ? BUSINESS_MODEL : INDIVIDUAL_MODEL
     const systemPrompt   = buildSystemPrompt(tier, model, task, depth)
     const prompt         = await callGemini(modelId, systemPrompt, userInput, isBusinessTier)
+
+    // Audit log — extract user from token if present (optional auth)
+    try {
+      const payload = verifyToken(req.headers.authorization)
+      db.prepare(
+        'INSERT INTO audit_log (user_id, user_email, tier, reason, timestamp) VALUES (?, ?, ?, ?, ?)'
+      ).run(payload?.id ?? null, payload?.email ?? null, tier, 'prompt_generation', Date.now())
+    } catch { /* non-blocking — never fail a generation over audit */ }
+
     res.json({ prompt })
   } catch (err) {
     console.error('[/api/generate]', err.message)
@@ -247,6 +280,30 @@ app.get('/api/auth/me', (req, res) => {
   const user = db.prepare('SELECT name, email, tier FROM users WHERE id = ?').get(payload.id)
   if (!user) return res.status(401).json({ error: 'User not found.' })
   res.json({ user })
+})
+
+// POST /api/auth/redeem-code — validate + consume a one-time burner code
+const BURNER_CODES = ['lee unlimited', 'josh unlimited', 'dan unlimited']
+
+app.post('/api/auth/redeem-code', (req, res) => {
+  const payload = verifyToken(req.headers.authorization)
+  if (!payload) return res.status(401).json({ error: 'You must be logged in to redeem a code.' })
+
+  const { code } = req.body ?? {}
+  if (!code?.trim()) return res.status(400).json({ error: 'No code provided.' })
+
+  const normalised = code.trim().toLowerCase()
+  if (!BURNER_CODES.includes(normalised)) {
+    return res.status(400).json({ error: 'Invalid code.' })
+  }
+
+  const already = db.prepare('SELECT user_id FROM redeemed_codes WHERE code = ?').get(normalised)
+  if (already) return res.status(409).json({ error: 'This code has already been redeemed.' })
+
+  db.prepare('INSERT INTO redeemed_codes (code, user_id) VALUES (?, ?)').run(normalised, payload.id)
+  db.prepare("UPDATE users SET plan = 'partner' WHERE id = ?").run(payload.id)
+
+  res.json({ success: true, plan: 'partner', credits: 10000 })
 })
 
 // Production: serve the Vite build

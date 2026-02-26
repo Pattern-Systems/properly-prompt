@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TypewriterHero from './TypewriterHero'
+import ActionFooter from './ActionFooter'
+import TouchGrassModal from './TouchGrassModal'
+import BuyMoreModal from './BuyMoreModal'
 import { generateBusinessPrompt } from '../api'
+import { useCredits } from '../hooks/useCredits'
 
 const MODELS = ['Claude 3.5', 'GPT-4o', 'Gemini 1.5 Pro', 'Sora', 'Qwen3', 'Mistral Large']
 const TASKS = ['Image Generation', 'Video Production', 'App / Web Dev', 'Data & Excel', 'Copywriting', 'Research']
@@ -14,21 +18,35 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
   const [generatedPrompt, setGeneratedPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
-  const [credits, setCredits] = useState(10)
 
-  const inkColor = 'var(--color-ink)'
-  const mutedColor = 'var(--color-ink-muted)'
+  const {
+    syncing,
+    showTouchGrass,
+    dismissTouchGrass,
+    displayCredits,
+    affordable,
+    consumeCredit,
+    addCredits,
+    activateTopUp,
+    activateSubscription,
+    redeemBurnerCode,
+  } = useCredits()
+
+  const [showPricing, setShowPricing] = useState(false)
+
+  const inkColor    = 'var(--color-ink)'
+  const mutedColor  = 'var(--color-ink-muted)'
   const accentColor = 'var(--color-accent)'
   const borderColor = 'var(--color-ink)'
 
   async function handleGenerate() {
-    if (!userInput.trim() || isGenerating || credits <= 0) return
+    if (!userInput.trim() || isGenerating || !affordable) return
     setIsGenerating(true)
     setError('')
     try {
       const prompt = await generateBusinessPrompt({ model, task, depth, userInput })
       setGeneratedPrompt(prompt)
-      setCredits((c) => Math.max(0, c - 1))
+      consumeCredit(user?.email, 'business') // fire-and-forget after success
     } catch (err) {
       if (err.code === 'OVER_LIMIT') { onOverLimit?.(); return }
       setError('Failed to generate prompt. Please try again.')
@@ -37,6 +55,8 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
       setIsGenerating(false)
     }
   }
+
+  const outOfCredits = !affordable
 
   return (
     <motion.div
@@ -76,24 +96,18 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {/* Credits counter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: '0.65rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: mutedColor,
-            }}>Daily Credits</span>
-            <div style={{
-              border: `1px solid ${accentColor}`,
-              padding: '0.15rem 0.5rem',
-              color: accentColor,
-              fontFamily: 'var(--font-serif)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-            }}>
-              {credits} / 10
-            </div>
+          <div style={{
+            border: `1px solid ${displayCredits.warning ? accentColor : 'rgba(26,26,24,0.25)'}`,
+            padding: '0.15rem 0.6rem',
+            color: displayCredits.warning ? accentColor : mutedColor,
+            fontFamily: displayCredits.opaque ? 'var(--font-sans)' : 'var(--font-serif)',
+            fontWeight: displayCredits.opaque ? 500 : 700,
+            fontSize: '0.78rem',
+            letterSpacing: displayCredits.opaque ? '0.04em' : 0,
+            transition: 'color 0.2s, border-color 0.2s',
+            opacity: syncing ? 0.5 : 1,
+          }}>
+            {syncing ? '···' : displayCredits.label}
           </div>
 
           <span style={{
@@ -122,7 +136,7 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
         </div>
       </header>
 
-<main style={{ maxWidth: '72rem', margin: '0 auto', padding: '2.5rem 1.5rem' }}>
+      <main style={{ maxWidth: '72rem', margin: '0 auto', padding: '2.5rem 1.5rem 5rem' }}>
 
         {/* Live preview section */}
         <section style={{ marginBottom: '3rem' }}>
@@ -255,12 +269,13 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
           <button
             className="wax-seal"
             onClick={handleGenerate}
-            disabled={isGenerating || !userInput.trim() || credits <= 0}
-            style={{ opacity: (!userInput.trim() || isGenerating || credits <= 0) ? 0.5 : 1 }}>
+            disabled={isGenerating || !userInput.trim() || outOfCredits}
+            title={outOfCredits ? 'Top up required' : undefined}
+            style={{ opacity: (!userInput.trim() || isGenerating || outOfCredits) ? 0.5 : 1 }}>
             {isGenerating ? 'Engineering...' : 'Engineer My Prompt'}
           </button>
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: mutedColor }}>
-            {credits > 0 ? 'Uses 1 credit' : 'No credits remaining'}
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: outOfCredits ? accentColor : mutedColor }}>
+            {outOfCredits ? 'Top up required — use referral or buy more below' : 'Uses 1 credit'}
           </span>
         </div>
 
@@ -321,6 +336,21 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
         </AnimatePresence>
 
       </main>
+
+      <ActionFooter addCredits={addCredits} user={user} onBuyMore={() => setShowPricing(true)} />
+
+      <AnimatePresence>
+        {showTouchGrass && <TouchGrassModal onDismiss={dismissTouchGrass} />}
+      </AnimatePresence>
+
+      {showPricing && (
+        <BuyMoreModal
+          onClose={() => setShowPricing(false)}
+          activateTopUp={activateTopUp}
+          activateSubscription={activateSubscription}
+          redeemBurnerCode={redeemBurnerCode}
+        />
+      )}
     </motion.div>
   )
 }

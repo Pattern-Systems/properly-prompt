@@ -36,6 +36,15 @@ export default function App() {
     getMe().then(u => { if (u) setUser(u) })
   }, [])
 
+  // ReferralManager — capture ?ref=ID from URL on first visit
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const ref = params.get('ref')
+    if (ref) {
+      localStorage.setItem('pp_referrer', ref)
+    }
+  }, [])
+
   function handleOverLimit() {
     setOverLimit(true)
   }
