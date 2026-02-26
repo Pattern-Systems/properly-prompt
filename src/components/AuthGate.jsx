@@ -86,6 +86,7 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
       {/* Form */}
       <form
         onSubmit={handleSubmit}
+        noValidate
         style={{ width: '100%', maxWidth: '400px' }}>
 
         <h2 style={{
@@ -120,10 +121,10 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
               color: 'var(--color-ink-muted)',
               marginBottom: '0.75rem',
             }}>
-              Select Your Plan
+              Select Your Use
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-              {/* Individual */}
+              {/* Personal Use */}
               <button
                 type="button"
                 onClick={() => setTier('Individual')}
@@ -135,18 +136,6 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
                   textAlign: 'left',
                   transition: 'border-color 0.15s, background 0.15s',
                 }}>
-                <div style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '0.58rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: tier === 'Individual' ? 'var(--color-accent)' : 'var(--color-ink-muted)',
-                  marginBottom: '0.25rem',
-                  transition: 'color 0.15s',
-                }}>
-                  Individual
-                </div>
                 <div style={{
                   fontFamily: 'var(--font-serif)',
                   fontSize: '0.9rem',
@@ -166,7 +155,7 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
                 </div>
               </button>
 
-              {/* Business */}
+              {/* Business Use */}
               <button
                 type="button"
                 onClick={() => setTier('Business')}
@@ -179,25 +168,13 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
                   transition: 'border-color 0.15s, background 0.15s',
                 }}>
                 <div style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '0.58rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: tier === 'Business' ? 'var(--color-ink)' : 'var(--color-ink-muted)',
-                  marginBottom: '0.25rem',
-                  transition: 'color 0.15s',
-                }}>
-                  Business
-                </div>
-                <div style={{
                   fontFamily: 'var(--font-serif)',
                   fontSize: '0.9rem',
                   fontWeight: 700,
                   color: 'var(--color-ink)',
                   marginBottom: '0.2rem',
                 }}>
-                  Enterprise Use
+                  Business Use
                 </div>
                 <div style={{
                   fontFamily: 'var(--font-garamond)',
@@ -328,7 +305,7 @@ export default function AuthGate({ mode = 'signup', onAuth, onBack }) {
             textAlign: 'center',
             marginTop: '0.75rem',
           }}>
-            Select a plan above to continue
+            Select your use above to continue
           </p>
         )}
 

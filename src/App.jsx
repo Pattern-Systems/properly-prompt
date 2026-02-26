@@ -5,6 +5,7 @@ import IndividualToolUI from './components/IndividualToolUI'
 import BusinessToolUI from './components/BusinessToolUI'
 import HighDemandPage from './components/HighDemandPage'
 import TypewriterHero from './components/TypewriterHero'
+import PricingPage from './components/PricingPage'
 import { getMe, clearSession } from './api'
 import './index.css'
 
@@ -27,7 +28,7 @@ const STATS = [
 ]
 
 export default function App() {
-  const [page, setPage] = useState('home')  // 'home' | 'signup' | 'login'
+  const [page, setPage] = useState('home')  // 'home' | 'signup' | 'login' | 'pricing'
   const [user, setUser] = useState(null)    // { name, email, tier }
   const [overLimit, setOverLimit] = useState(false)
 
@@ -69,6 +70,14 @@ export default function App() {
     )
   }
 
+  if (page === 'pricing') {
+    return (
+      <motion.div key="pricing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+        <PricingPage onBack={() => setPage('home')} onGetStarted={() => setPage('signup')} />
+      </motion.div>
+    )
+  }
+
   if (page === 'signup') {
     return (
       <motion.div key="signup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
@@ -87,12 +96,12 @@ export default function App() {
 
   return (
     <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
-      <LandingPage onGetStarted={() => setPage('signup')} onLogin={() => setPage('login')} />
+      <LandingPage onGetStarted={() => setPage('signup')} onLogin={() => setPage('login')} onPricing={() => setPage('pricing')} />
     </motion.div>
   )
 }
 
-function LandingPage({ onGetStarted, onLogin }) {
+function LandingPage({ onGetStarted, onLogin, onPricing }) {
   const carouselItems = [...CAROUSEL_MODELS, ...CAROUSEL_MODELS]
 
   return (
@@ -122,6 +131,21 @@ function LandingPage({ onGetStarted, onLogin }) {
           Properly Prompt
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={onPricing}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              color: 'var(--color-ink-muted)',
+              cursor: 'pointer',
+              padding: '0.4rem 0.75rem',
+              letterSpacing: '0.01em',
+            }}>
+            Pricing
+          </button>
           <button
             onClick={onLogin}
             style={{
@@ -306,7 +330,7 @@ function LandingPage({ onGetStarted, onLogin }) {
           marginBottom: '1rem',
           textAlign: 'center',
         }}>
-          Get 10 free credits daily — no credit card required.
+          Get 10 free prompts daily — no credit card required.
         </p>
 
         <button

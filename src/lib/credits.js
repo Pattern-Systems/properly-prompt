@@ -13,14 +13,14 @@ export const PLANS = {
     id:          'tier1',
     label:       'Probably Never Run Out',
     type:        'subscription',
-    price:       '£9.99/mo',
+    price:       '£4.99/mo',
     internalCap: 1000,  // opaque — never shown unless > 90% consumed
   },
   tier2: {
     id:          'tier2',
     label:       'Definitely Never Run Out',
     type:        'subscription',
-    price:       '£29.99/mo',
+    price:       '£14.99/mo',
     internalCap: 10000, // opaque
   },
   partner: {
@@ -36,8 +36,8 @@ export const PLANS = {
 // Top-up credits carry over (not daily-reset). Consumed after subscription bucket.
 
 export const TOP_UPS = {
-  snack: { id: 'snack', label: 'The Snack', price: '£5',  credits: 50  },
-  pack:  { id: 'pack',  label: 'The Pack',  price: '£10', credits: 100 },
+  snack: { id: 'snack', label: 'The Snack', price: '£2.50', credits: 50  },
+  pack:  { id: 'pack',  label: 'The Pack',  price: '£5',   credits: 100 },
 }
 
 // ─── Burner Code Registry ─────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ export function getDisplayCredits(state) {
 
     return {
       opaque:  false,
-      label:   `Credits: ${state.subscriptionCredits} / ${plan.internalCap}`,
+      label:   `Prompts: ${state.subscriptionCredits} / ${plan.internalCap}`,
       current: state.subscriptionCredits,
       cap:     plan.internalCap,
       warning: true,
@@ -167,7 +167,7 @@ export function getDisplayCredits(state) {
 
   return {
     opaque:  false,
-    label:   `Credits: ${total} / ${displayCap}`,
+    label:   `Prompts: ${total} / ${displayCap}`,
     current: total,
     cap:     displayCap,
     warning: total === 0,

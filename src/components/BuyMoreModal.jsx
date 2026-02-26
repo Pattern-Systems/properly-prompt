@@ -193,12 +193,12 @@ export default function BuyMoreModal({ onClose, activateTopUp, activateSubscript
           <PricingCard
             label="The Snack"
             description="50 prompts, carried over"
-            price="£5"
+            price="£2.50"
           />
           <PricingCard
             label="The Pack"
             description="100 prompts, carried over"
-            price="£10"
+            price="£5"
           />
         </div>
 
@@ -211,14 +211,14 @@ export default function BuyMoreModal({ onClose, activateTopUp, activateSubscript
             sublabel="Tier 1"
             label={<>Probably Never<br />Run Out</>}
             description="Monthly subscription"
-            price="£9.99"
+            price="£4.99"
             priceSuffix=" /mo"
           />
           <PricingCard
             sublabel="Tier 2"
             label={<>Definitely Never<br />Run Out</>}
             description="Monthly subscription"
-            price="£29.99"
+            price="£14.99"
             priceSuffix=" /mo"
             highlighted
           />

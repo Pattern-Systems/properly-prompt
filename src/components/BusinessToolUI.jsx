@@ -110,6 +110,22 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
             {syncing ? '···' : displayCredits.label}
           </div>
 
+          <button
+            onClick={() => setShowPricing(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.65rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: accentColor,
+              cursor: 'pointer',
+              padding: 0,
+            }}>
+            Upgrade Plan
+          </button>
+
           <span style={{
             fontFamily: 'var(--font-sans)',
             fontSize: '0.7rem',
@@ -275,7 +291,7 @@ export default function BusinessToolUI({ user, onOverLimit, onLogout }) {
             {isGenerating ? 'Engineering...' : 'Engineer My Prompt'}
           </button>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '0.75rem', color: outOfCredits ? accentColor : mutedColor }}>
-            {outOfCredits ? 'Top up required — use referral or buy more below' : 'Uses 1 credit'}
+            {outOfCredits ? 'Top up required — use referral or buy more below' : 'Uses 1 prompt'}
           </span>
         </div>
 
